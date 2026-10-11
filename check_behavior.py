@@ -1,4 +1,4 @@
-"""Bước 4: mắt, miệng/ngáp ứng viên, góc đầu và cúi–trở lại, webcam hoặc MP4."""
+"""Bước 5: mắt, miệng/ngáp ứng viên, góc đầu và cúi–trở lại, webcam hoặc MP4."""
 import argparse
 from collections import Counter
 from dataclasses import asdict
@@ -12,15 +12,17 @@ import sys
 import time
 import numpy as np
 
+from window_features import ObservedClosed, export as export_windows
+
 from eye_events import EyeConfig, EyeTracker, eye_aspect_ratio
 from behavior_features import (mouth_ratio, rotation_from_matrix, relative_angles,
                                AngleFilter, DurationConfig, DurationTracker, NeutralCalibration)
 
 ROOT = Path(__file__).resolve().parent
-EVENT_FIELDS = ['channel', 'kind', 'start_s', 'end_s', 'duration_s', 'start_known', 'peak', 'reason']
+EVENT_FIELDS = ['channel', 'kind', 'start_s', 'end_s', 'duration_s', 'start_known', 'peak', 'reason', 'available_at_s']
 FRAME_FIELDS = ['t_seconds', 'timestamp_ms', 'phase', 'geometry_state', 'geometry_reasons',
-                'left_ear', 'right_ear', 'eyes_valid', 'eye_state', 'eye_closure_s',
-                'long_closure', 'eye_reason', 'mar_simple', 'mouth_valid', 'mouth_state',
+                'left_ear', 'right_ear', 'left_ear_baseline', 'right_ear_baseline', 'eyes_valid', 'eye_state', 'eye_closure_s',
+                'long_closure', 'eye_reason', 'eye_observed_closed_s', 'eye_observed_start_known', 'mar_simple', 'mouth_valid', 'mouth_state',
                 'mouth_duration_s', 'mouth_start_known', 'mouth_held_flag', 'mouth_reason',
                 'pose_valid', 'pitch_raw_deg', 'yaw_raw_deg', 'roll_raw_deg',
                 'pitch_deg', 'yaw_deg', 'roll_deg', 'pitch_velocity_deg_s', 'head_state',
@@ -51,13 +53,18 @@ def arguments():
     p.add_argument('--head-hold', type=float, default=2)
     p.add_argument('--pitch-sign', type=int, choices=(-1, 1), default=1,
                    help='Đổi thành -1 nếu cúi xuống làm pitch âm trong phép thử')
+    p.add_argument('--window', type=float, default=30)
+    p.add_argument('--stride', type=float, default=5)
+    p.add_argument('--min-valid', type=float, default=.8)
     p.add_argument('--max-gap', type=float, default=.2)
     a = p.parse_args()
     vals = [a.fps, a.calibration_seconds, a.close_ratio, a.open_ratio, a.mouth_open,
             a.mouth_close, a.yawn_min, a.yawn_max, a.nod_enter, a.nod_exit,
-            a.nod_max, a.head_hold, a.max_gap]
+            a.nod_max, a.head_hold, a.max_gap, a.window, a.stride]
     if a.camera < 0 or min(a.width, a.height) <= 0 or not all(math.isfinite(v) and v > 0 for v in vals):
         p.error('Kích thước/tham số phải hữu hạn và > 0; camera >= 0')
+    if not math.isfinite(a.min_valid) or not 0 <= a.min_valid <= 1:
+        p.error('min-valid phải nằm trong [0,1]')
     if a.seconds is not None and (not math.isfinite(a.seconds) or a.seconds <= 0):
         p.error('seconds phải > 0 và hữu hạn')
     if a.video and not Path(a.video).is_file():
@@ -93,6 +100,7 @@ class Processor:
         self.eyes = self.mouth = self.head = None
         self.filter = AngleFilter(max_gap=a.max_gap)
         self.history = []
+        self.observed_eyes = ObservedClosed(max_gap=a.max_gap)
 
     def configs(self):
         if self.baseline is None:
@@ -118,8 +126,12 @@ class Processor:
         missing = geometry.points is None
         row = dict(phase='CALIBRATING' if self.baseline is None else 'TRACKING',
                    geometry_state=geometry.state, geometry_reasons='|'.join(geometry.reasons),
-                   left_ear=left, right_ear=right, eyes_valid=int(eyes_valid),
+                   left_ear=left, right_ear=right,
+                   left_ear_baseline=self.baseline.get('left_baseline') if self.baseline is not None else None,
+                   right_ear_baseline=self.baseline.get('right_baseline') if self.baseline is not None else None,
+                   eyes_valid=int(eyes_valid),
                    eye_state='UNKNOWN', eye_closure_s=None, long_closure=0,
+                   eye_observed_closed_s=None, eye_observed_start_known=0,
                    eye_reason='' if eyes_valid else ('no_face' if missing else 'invalid_eye_geometry'),
                    mar_simple=mar, mouth_valid=0, mouth_state='UNKNOWN', mouth_duration_s=None,
                    mouth_start_known=0, mouth_held_flag=0, mouth_reason='calibrating',
@@ -151,6 +163,12 @@ class Processor:
             return row, events
         eye = self.eyes.update(t, left, right, eyes_valid, row['eye_reason'])
         row.update(eye_state=eye['state'], eye_closure_s=eye['closure_s'], long_closure=int(eye['long_closure']))
+        observed_s, observed_long, observed_event = self.observed_eyes.update(t, eye['state'], eye['closure_s'])
+        row.update(eye_observed_closed_s=observed_s,
+                   eye_observed_start_known=int(observed_s is not None and not self.observed_eyes.unknown_onset),
+                   long_closure=int(eye['long_closure'] or observed_long))
+        if observed_event is not None:
+            events.append(observed_event)
         if eyes_valid and eye['state'] == 'UNKNOWN':
             row['eye_reason'] = 'eyes_disagree_or_uncertain'
         events += [dict(channel='eyes', start_known=1, peak=None, **e) for e in eye['events']]
@@ -222,6 +240,7 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
             def log(events):
                 for event in events:
                     counts[event['channel']+':'+event['kind']] += 1
+                    event = dict(event, available_at_s=last_t if last_t is not None else 0.)
                     ew.writerow({k: '' if v is None else round(v, 6) if isinstance(v, float) else v for k, v in event.items()})
                     print(f"{event['channel']} {event['kind']}: {event['duration_s']:.3f}s [{event['reason']}]")
                 if events:
@@ -291,7 +310,7 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
                     cv2.rectangle(frame, (0, y0), (frame.shape[1], frame.shape[0]), (25,25,25), -1)
                     for i, label in enumerate(labels):
                         cv2.putText(frame, label, (8, y0+step*(i+1)), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (235,235,235), 1, cv2.LINE_AA)
-                    cv2.imshow('Driver Monitor - Step 4', frame)
+                    cv2.imshow('Driver Monitor - Step 5', frame)
                     key = cv2.waitKey(1) & 0xFF
                     if key in (ord('q'), ord('Q'), 27):
                         status, stop_reason = 'user_stopped', 'key'
@@ -300,7 +319,7 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
                         log(proc.interrupt(t, 'recalibration'))
                         history = proc.history
                         proc = Processor(a); proc.history = history
-                    if cv2.getWindowProperty('Driver Monitor - Step 4', cv2.WND_PROP_VISIBLE) < 1:
+                    if cv2.getWindowProperty('Driver Monitor - Step 5', cv2.WND_PROP_VISIBLE) < 1:
                         status, stop_reason = 'window_closed', 'window'
                         break
             finally:
@@ -334,7 +353,19 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
                   files=dict(frames=frames_path.name, events=events_path.name),
                   definitions=dict(mar_simple='distance(13,14)/distance(78,308) in pixels',
                                    pose='SVD rotation from MediaPipe matrix; delta R @ neutral.T; RzRyRx Euler; pitch sign configurable'),
-                  note='Heuristic candidates, not drowsiness diagnosis. Held flag and completed event may describe one event. FPS fallback assumes constant FPS. Matrix pose and region geometry do not guarantee visibility. Eye long-closure logic needs a known onset.')
+                  note='Heuristic candidates, not drowsiness diagnosis. Held flag and completed event may describe one event. FPS fallback assumes constant FPS. Matrix pose and region geometry do not guarantee visibility. Unknown-onset eye flag uses strict observed lower-bound duration; no inferred blink.')
+    if frames >= 2:
+        try:
+            windows_path, windows = export_windows(frames_path, events_path, window=a.window, stride=a.stride,
+                                                   max_gap=a.max_gap, min_valid=a.min_valid,calibrations=proc.history)
+            report['files']['windows'] = windows_path.name
+            report['window_count'] = len(windows)
+            report['usable_window_count'] = sum(r['all_channels_usable'] for r in windows)
+            report['model_input_usable_window_count'] = sum(r['model_input_usable'] for r in windows)
+            print(f'Windows: {windows_path}; rows={len(windows)}')
+        except (ValueError, OSError) as exc:
+            report['windows_error'] = str(exc)
+            print(f'Windows unavailable: {exc}')
     json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False)+'\n', encoding='utf-8')
     print(f'JSON: {json_path}\nFrames: {frames_path}\nEvents: {events_path}')
     print(f'Status: {status}; stop: {stop_reason}; frames: {frames}; events: {dict(counts)}')

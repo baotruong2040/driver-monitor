@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "frames_file": "behavior_20261011_193409_915924_frames.csv",
+  "events_file": "behavior_20261011_193409_915924_events.csv",
+  "window_count": 17,
+  "options": {
+    "window": 30,
+    "stride": 5,
+    "max_gap": 0.2,
+    "min_valid": 0.8
+  },
+  "event_availability": "recorded",
+  "definitions": {
+    "interval": "both endpoints valid and available by window end; gaps/tail are unknown; no extrapolation",
+    "eye_ratio": "threshold-based bilateral closed time / valid eye time; not standardized PERCLOS",
+    "events": "candidate count by available_at_s in [start,end); flags excluded",
+    "longest": "strict observed CLOSED interval inside window; lower bound",
+    "overlap": "mouth OPEN is a proxy, not a verified yawn label"
+  },
+  "training": "labels intentionally blank; split by subject/video before windowing; do not randomly split overlapping windows"
+}

@@ -1,2 +1,5 @@
 .venv
 data
+AGENTS.md
+.env
+reports
