@@ -1,0 +1,145 @@
+{
+  "created_at": "2026-10-11T18:45:22.509236+07:00",
+  "status": "window_closed",
+  "error": null,
+  "stop_reason": "window",
+  "arguments": {
+    "camera": 0,
+    "video": null,
+    "seconds": 120.0,
+    "check": false,
+    "headless": false,
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "calibration_seconds": 8,
+    "close_ratio": 0.65,
+    "open_ratio": 0.8,
+    "mouth_open": 0.45,
+    "mouth_close": 0.3,
+    "yawn_min": 1.5,
+    "yawn_max": 10,
+    "nod_enter": 15,
+    "nod_exit": 8,
+    "nod_max": 2.5,
+    "head_hold": 2,
+    "pitch_sign": 1,
+    "max_gap": 0.2
+  },
+  "source_type": "camera",
+  "backend": "MSMF",
+  "source_fps": 30.0,
+  "expected_video_frames": null,
+  "actual_size": {
+    "width": 640,
+    "height": 480
+  },
+  "frames": 2901,
+  "elapsed_seconds": 99.29579269999977,
+  "processing_fps": 30.005708254898188,
+  "source_span_seconds": 96.64827689999947,
+  "time_basis": "monotonic_clock",
+  "timestamp_fallbacks": 0,
+  "max_source_interval_ms": 83.56060000005527,
+  "intervals_over_max_gap": 0,
+  "inference_mean_ms": 6.8254093416147965,
+  "environment": {
+    "python": "3.12.10",
+    "python_executable": "C:\\Users\\RiyaKi\\Documents\\VSCode\\AI\\driver-monitor\\.venv\\Scripts\\python.exe",
+    "opencv": "4.11.0",
+    "numpy": "2.2.6",
+    "mediapipe": "0.10.32",
+    "delegate": "CPU"
+  },
+  "state_counts": {
+    "CALIBRATING:eye:UNKNOWN": 242,
+    "CALIBRATING:mouth:UNKNOWN": 242,
+    "CALIBRATING:head:UNKNOWN": 242,
+    "TRACKING:eye:OPEN": 1445,
+    "TRACKING:mouth:CLOSED": 2170,
+    "TRACKING:head:NEUTRAL": 2659,
+    "TRACKING:eye:CLOSED": 835,
+    "TRACKING:eye:UNKNOWN": 379,
+    "TRACKING:mouth:OPEN": 489
+  },
+  "event_counts": {
+    "eyes:blink_candidate": 10,
+    "eyes:interrupted_closure": 8,
+    "mouth:mouth_open_event": 13,
+    "eyes:prolonged_closure": 5,
+    "eyes:long_closure_flag": 2,
+    "mouth:mouth_held_flag": 3,
+    "mouth:yawn_candidate": 3
+  },
+  "calibrations": [
+    {
+      "completed_at_s": 10.320559200000389,
+      "valid_seconds": 8.02629220000017,
+      "samples": 242,
+      "baseline": {
+        "left_baseline": 0.27030524971954417,
+        "right_baseline": 0.2720596423149799,
+        "mouth_baseline": 0.0029706922395704534,
+        "neutral_rotation": [
+          [
+            0.999853497341505,
+            0.009718272807954466,
+            0.014090387772935848
+          ],
+          [
+            -0.010832517376086915,
+            0.9966317167447305,
+            0.08128885376082158
+          ],
+          [
+            -0.01325294009864659,
+            -0.08142957909802558,
+            0.9965909809077445
+          ]
+        ],
+        "head_spread_p90": 5.774543591330162
+      },
+      "configs": {
+        "eyes": {
+          "left_close": 0.17569841231770372,
+          "left_open": 0.21624419977563536,
+          "right_close": 0.17683876750473695,
+          "right_open": 0.21764771385198395,
+          "blink_min_s": 0.06,
+          "blink_max_s": 0.5,
+          "long_closure_s": 1.5,
+          "max_gap_s": 0.2,
+          "max_disagreement_s": 0.12
+        },
+        "mouth": {
+          "channel": "mouth",
+          "enter": 0.45,
+          "exit": 0.3,
+          "min_duration": 1.5,
+          "max_candidate_duration": 10,
+          "flag_duration": 1.5,
+          "max_gap": 0.2
+        },
+        "head": {
+          "channel": "head",
+          "enter": 15,
+          "exit": 8,
+          "min_duration": 0.2,
+          "max_candidate_duration": 2.5,
+          "flag_duration": 2,
+          "max_gap": 0.2
+        }
+      }
+    }
+  ],
+  "calibration_active_at_end": false,
+  "files": {
+    "frames": "behavior_20261011_184343_214217_frames.csv",
+    "events": "behavior_20261011_184343_214217_events.csv"
+  },
+  "definitions": {
+    "mar_simple": "distance(13,14)/distance(78,308) in pixels",
+    "pose": "SVD rotation from MediaPipe matrix; delta R @ neutral.T; RzRyRx Euler; pitch sign configurable"
+  },
+  "note": "Heuristic candidates, not drowsiness diagnosis. Held flag and completed event may describe one event. FPS fallback assumes constant FPS. Matrix pose and region geometry do not guarantee visibility. Eye long-closure logic needs a known onset."
+}

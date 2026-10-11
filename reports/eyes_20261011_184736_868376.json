@@ -1,0 +1,87 @@
+{
+  "created_at": "2026-10-11T18:48:37.156230+07:00",
+  "status": "completed",
+  "error": null,
+  "environment": {
+    "python": "3.12.10",
+    "python_executable": "C:\\Users\\RiyaKi\\Documents\\VSCode\\AI\\driver-monitor\\.venv\\Scripts\\python.exe",
+    "opencv": "4.11.0",
+    "numpy": "2.2.6",
+    "mediapipe": "0.10.32",
+    "delegate": "CPU"
+  },
+  "arguments": {
+    "check": false,
+    "camera": 0,
+    "video": null,
+    "seconds": 60.0,
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "headless": false,
+    "calibration_seconds": 8,
+    "close_ratio": 0.65,
+    "open_ratio": 0.8,
+    "blink_min": 0.06,
+    "blink_max": 0.5,
+    "long_seconds": 1.5,
+    "max_gap": 0.2
+  },
+  "backend": "MSMF",
+  "camera_reported_fps": 30.0,
+  "actual_size": {
+    "width": 640,
+    "height": 480
+  },
+  "frames": 1732,
+  "elapsed_seconds": 60.289,
+  "loop_fps": 30.0,
+  "source_type": "camera",
+  "source_span_seconds": 57.697917,
+  "timestamp_fallbacks": 0,
+  "time_basis": "monotonic_clock",
+  "max_frame_interval_ms": 83.74,
+  "intervals_over_max_gap": 0,
+  "inference_mean_ms": 6.760074364892422,
+  "state_counts": {
+    "CALIBRATING:UNKNOWN": 242,
+    "TRACKING:OPEN": 511,
+    "TRACKING:CLOSED": 802,
+    "TRACKING:UNKNOWN": 177
+  },
+  "geometry_counts": {
+    "GEOMETRY_OK": 1732
+  },
+  "event_counts": {
+    "blink_candidate": 4,
+    "long_closure_flag": 3,
+    "interrupted_closure": 2,
+    "prolonged_closure": 1
+  },
+  "calibrations": [
+    {
+      "completed_at_s": 10.334321600000294,
+      "samples": 242,
+      "valid_seconds": 8.03547940000044,
+      "left_open_baseline": 0.2991067171274486,
+      "right_open_baseline": 0.30672919590623154,
+      "config": {
+        "left_close": 0.19441936613284158,
+        "left_open": 0.23928537370195888,
+        "right_close": 0.19937397733905052,
+        "right_open": 0.24538335672498524,
+        "blink_min_s": 0.06,
+        "blink_max_s": 0.5,
+        "long_closure_s": 1.5,
+        "max_gap_s": 0.2,
+        "max_disagreement_s": 0.12
+      }
+    }
+  ],
+  "calibration_active_at_end": false,
+  "files": {
+    "frames": "eyes_20261011_184736_868376_frames.csv",
+    "events": "eyes_20261011_184736_868376_events.csv"
+  },
+  "note": "Video read failure may mean EOF or decode failure. FPS fallback assumes constant frame rate. Bilateral EAR heuristic. Blink candidates are not ground truth. Long flag and completed closure can describe the same event."
+}

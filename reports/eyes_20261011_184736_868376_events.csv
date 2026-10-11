@@ -1,0 +1,11 @@
+kind,start_s,end_s,duration_s,reason
+blink_candidate,13.422768,13.597473,0.174706,reopened
+long_closure_flag,14.830009,16.332834,1.502825,observed_duration_threshold
+interrupted_closure,14.830009,25.265577,10.435569,eyes_disagree_timeout
+blink_candidate,44.894609,45.053594,0.158985,reopened
+blink_candidate,48.718428,49.181894,0.463466,reopened
+long_closure_flag,50.012703,51.517556,1.504854,observed_duration_threshold
+prolonged_closure,50.012703,52.003214,1.990511,reopened
+blink_candidate,56.461128,56.733952,0.272824,reopened
+long_closure_flag,56.958132,58.460243,1.502111,observed_duration_threshold
+interrupted_closure,56.958132,59.996759,3.038627,run_ended
