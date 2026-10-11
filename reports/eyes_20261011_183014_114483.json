@@ -1,0 +1,60 @@
+{
+  "created_at": "2026-10-11T18:30:15.761669+07:00",
+  "status": "user_stopped",
+  "error": null,
+  "environment": {
+    "python": "3.12.10",
+    "python_executable": "C:\\Users\\RiyaKi\\Documents\\VSCode\\AI\\driver-monitor\\.venv\\Scripts\\python.exe",
+    "opencv": "4.11.0",
+    "numpy": "2.2.6",
+    "mediapipe": "0.10.32",
+    "delegate": "CPU"
+  },
+  "arguments": {
+    "check": false,
+    "camera": 0,
+    "video": ".\\data\\test.mp4",
+    "seconds": 40.0,
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "headless": false,
+    "calibration_seconds": 8,
+    "close_ratio": 0.65,
+    "open_ratio": 0.8,
+    "blink_min": 0.06,
+    "blink_max": 0.5,
+    "long_seconds": 1.5,
+    "max_gap": 0.2
+  },
+  "backend": "FFMPEG",
+  "camera_reported_fps": 30.04039813855765,
+  "actual_size": {
+    "width": 1280,
+    "height": 720
+  },
+  "frames": 104,
+  "elapsed_seconds": 1.646,
+  "loop_fps": 64.31,
+  "source_type": "video",
+  "source_span_seconds": 3.4559,
+  "timestamp_fallbacks": 0,
+  "time_basis": "video_position_with_fps_fallback",
+  "max_frame_interval_ms": 64.13,
+  "intervals_over_max_gap": 0,
+  "inference_mean_ms": 6.33886057692752,
+  "state_counts": {
+    "CALIBRATING:UNKNOWN": 104
+  },
+  "geometry_counts": {
+    "GEOMETRY_OK": 104
+  },
+  "event_counts": {},
+  "calibrations": [],
+  "calibration_active_at_end": true,
+  "files": {
+    "frames": "eyes_20261011_183014_114483_frames.csv",
+    "events": "eyes_20261011_183014_114483_events.csv"
+  },
+  "note": "Video read failure may mean EOF or decode failure. FPS fallback assumes constant frame rate. Bilateral EAR heuristic. Blink candidates are not ground truth. Long flag and completed closure can describe the same event."
+}
