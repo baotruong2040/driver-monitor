@@ -1,0 +1,48 @@
+{
+  "created_at": "2026-10-11T17:14:01.509787+07:00",
+  "environment": {
+    "python": "3.12.10",
+    "python_executable": "C:\\Users\\RiyaKi\\Documents\\VSCode\\AI\\driver-monitor\\.venv\\Scripts\\python.exe",
+    "opencv": "4.11.0",
+    "numpy": "2.2.6",
+    "mediapipe": "0.10.32",
+    "session_type": "unknown",
+    "qt_platform": "default",
+    "delegate": "CPU",
+    "model_version": "face_landmarker/float16/1"
+  },
+  "camera_index": 0,
+  "requested": {
+    "width": 640,
+    "height": 480,
+    "fps": 30
+  },
+  "headless": false,
+  "geometry_thresholds_px": {
+    "eye_width": 14,
+    "mouth_width": 20
+  },
+  "backend": "MSMF",
+  "camera_reported_fps": 30.0,
+  "status": "completed",
+  "error": null,
+  "frames": 1729,
+  "elapsed_seconds": 60.291,
+  "actual_size": {
+    "width": 640,
+    "height": 480
+  },
+  "loop_fps": 30.02,
+  "max_frame_interval_ms": 83.81,
+  "intervals_over_200ms": 0,
+  "inference_mean_ms": 6.16,
+  "inference_p95_ms": 8.08,
+  "state_counts": {
+    "GEOMETRY_OK": 1484,
+    "LIMITED_GEOMETRY": 14,
+    "NO_FACE": 231
+  },
+  "geometry_ok_fraction": 0.8583,
+  "csv_file": "face_20261011_171401_509787.csv",
+  "measurement_note": "FPS vòng lặp gồm đọc camera + suy luận + log/hiển thị; geometry OK chỉ là kiểm tra tọa độ/kích thước."
+}
