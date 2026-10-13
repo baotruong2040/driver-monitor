@@ -76,11 +76,11 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 6.0.1
+    version: 6.1.0
 direct_dependencies:
 - espressif/esp32-camera
 - espressif/usb_device_uvc
 - idf
 manifest_hash: c08e486b9631a64f3db68d1cb5f8bc6c713328cc801eb4fa720535ad31e66689
 target: esp32s3
-version: 2.0.0
+version: 3.0.0
