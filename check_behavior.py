@@ -26,7 +26,7 @@ FRAME_FIELDS = ['t_seconds', 'timestamp_ms', 'phase', 'geometry_state', 'geometr
                 'mouth_duration_s', 'mouth_start_known', 'mouth_held_flag', 'mouth_reason',
                 'pose_valid', 'pitch_raw_deg', 'yaw_raw_deg', 'roll_raw_deg',
                 'pitch_deg', 'yaw_deg', 'roll_deg', 'pitch_velocity_deg_s', 'head_state',
-                'head_duration_s', 'head_start_known', 'head_held_flag', 'head_reason', 'inference_ms']
+                'head_duration_s', 'head_start_known', 'head_held_flag', 'head_reason', 'nod_pitch_deg', 'inference_ms']
 
 
 def arguments():
@@ -37,6 +37,7 @@ def arguments():
     p.add_argument('--seconds', type=float, help='Giới hạn theo thời gian nguồn; video mặc định hết tệp')
     p.add_argument('--check', action='store_true')
     p.add_argument('--headless', action='store_true')
+    p.add_argument('--alarm-port', help='USB CDC port, e.g. /dev/ttyACM0 or COM12')
     p.add_argument('--width', type=int, default=640)
     p.add_argument('--height', type=int, default=480)
     p.add_argument('--fps', type=float, default=30)
@@ -58,6 +59,8 @@ def arguments():
     p.add_argument('--min-valid', type=float, default=.8)
     p.add_argument('--max-gap', type=float, default=.2)
     a = p.parse_args()
+    if a.video and a.alarm_port:
+        p.error('--alarm-port chỉ dùng với camera trực tiếp')
     vals = [a.fps, a.calibration_seconds, a.close_ratio, a.open_ratio, a.mouth_open,
             a.mouth_close, a.yawn_min, a.yawn_max, a.nod_enter, a.nod_exit,
             a.nod_max, a.head_hold, a.max_gap, a.window, a.stride]
@@ -99,8 +102,9 @@ class Processor:
         self.baseline = None
         self.eyes = self.mouth = self.head = None
         self.filter = AngleFilter(max_gap=a.max_gap)
+        self.nod_filter = AngleFilter(tau=getattr(a, 'nod_filter_tau', .15), max_gap=a.max_gap)
         self.history = []
-        self.observed_eyes = ObservedClosed(max_gap=a.max_gap)
+        self.observed_eyes = ObservedClosed(threshold=getattr(a, 'eye_closed_seconds', 1.5), max_gap=a.max_gap)
 
     def configs(self):
         if self.baseline is None:
@@ -137,7 +141,7 @@ class Processor:
                    mouth_start_known=0, mouth_held_flag=0, mouth_reason='calibrating',
                    pose_valid=int(rotation is not None), pitch_raw_deg=None, yaw_raw_deg=None,
                    roll_raw_deg=None, pitch_deg=None, yaw_deg=None, roll_deg=None,
-                   pitch_velocity_deg_s=None, head_state='UNKNOWN', head_duration_s=None,
+                   pitch_velocity_deg_s=None, nod_pitch_deg=None, head_state='UNKNOWN', head_duration_s=None,
                    head_start_known=0, head_held_flag=0, head_reason='calibrating')
         events = []
         if self.baseline is None:
@@ -148,11 +152,12 @@ class Processor:
                 b = self.baseline
                 self.eyes = EyeTracker(EyeConfig(b['left_baseline']*a.close_ratio, b['left_baseline']*a.open_ratio,
                                                 b['right_baseline']*a.close_ratio, b['right_baseline']*a.open_ratio,
+                                                long_closure_s=getattr(a, 'eye_closed_seconds', 1.5),
                                                 max_gap_s=a.max_gap))
                 self.mouth = DurationTracker(DurationConfig('mouth', max(a.mouth_open, b['mouth_baseline']+.25),
                                             max(a.mouth_close, b['mouth_baseline']+.15),
                                             a.yawn_min, a.yawn_max, a.yawn_min, a.max_gap))
-                self.head = DurationTracker(DurationConfig('head', a.nod_enter, a.nod_exit, .2,
+                self.head = DurationTracker(DurationConfig('head', a.nod_enter, a.nod_exit, getattr(a, 'nod_min', .2),
                                            a.nod_max, a.head_hold, a.max_gap))
                 entry = dict(completed_at_s=t, valid_seconds=self.calibration.valid_seconds,
                              samples=len(self.calibration.samples),
@@ -181,7 +186,9 @@ class Processor:
         if filtered is not None:
             row.update(pitch_deg=filtered[0], yaw_deg=filtered[1], roll_deg=filtered[2], pitch_velocity_deg_s=velocity)
         head_reason = '' if head_valid else ('no_face' if missing else 'invalid_matrix_or_extreme_pose')
-        head = self.head.update(t, filtered[0] if filtered is not None else None, head_valid, head_reason)
+        nod_angles, _ = self.nod_filter.update(t, angles if head_valid else None)
+        row['nod_pitch_deg'] = nod_angles[0] if nod_angles is not None else None
+        head = self.head.update(t, row['nod_pitch_deg'], head_valid, head_reason)
         row.update(head_state={'ACTIVE': 'DOWN', 'REST': 'NEUTRAL', 'UNKNOWN': 'UNKNOWN'}[head['state']],
                    head_duration_s=head['duration_s'], head_start_known=head['start_known'],
                    head_held_flag=int(head['held_flag']), head_reason=head_reason)
@@ -218,8 +225,12 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
     frames_path, events_path, json_path = [folder/(prefix+suffix) for suffix in ('_frames.csv', '_events.csv', '.json')]
     actual_size = None
     print('Hiệu chỉnh: nhìn thẳng, mắt mở tự nhiên, miệng khép, giữ đầu trung tính.')
-    print('Q/Esc thoát | C hiệu chỉnh lại | Chưa có âm thanh hoặc model buồn ngủ.')
+    print('Q/Esc thoát | C hiệu chỉnh lại | Cảnh báo thử theo nhắm mắt kéo dài; chưa có model buồn ngủ.')
+    alarm = None
     try:
+        if a.alarm_port:
+            from usb_alarm import USBAlarm
+            alarm = USBAlarm(a.alarm_port)
         folder.mkdir(exist_ok=True)
         if not video:
             capture.set(cv2.CAP_PROP_FRAME_WIDTH, a.width)
@@ -282,6 +293,8 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
                     geometry = inspect_face(face, frame.shape[1], frame.shape[0])
                     matrix = result.facial_transformation_matrixes[0] if result.facial_transformation_matrixes else None
                     row, events = proc.update(t, geometry, matrix)
+                    if alarm is not None:
+                        alarm.update(bool(row['long_closure']))
                     log(events)
                     row.update(t_seconds=t, timestamp_ms=ms, inference_ms=inference_ms)
                     fw.writerow({k: '' if v is None else round(v, 6) if isinstance(v, float) else v for k, v in row.items()})
@@ -316,6 +329,8 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
                         status, stop_reason = 'user_stopped', 'key'
                         break
                     if key in (ord('c'), ord('C')):
+                        if alarm is not None:
+                            alarm.update(False)
                         log(proc.interrupt(t, 'recalibration'))
                         history = proc.history
                         proc = Processor(a); proc.history = history
@@ -330,6 +345,11 @@ def run(a, cv2, mp, landmarker, inspect_face, draw_geometry):
         status, error = 'error', str(exc)
     finally:
         capture.release()
+        if alarm is not None:
+            try:
+                alarm.close()
+            except OSError as exc:
+                status, error = 'error', str(exc)
         if not a.headless:
             try:
                 cv2.destroyAllWindows()
