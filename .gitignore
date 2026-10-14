@@ -3,3 +3,5 @@ data
 AGENTS.md
 .env
 reports
+__pycache__/
+*.py[cod]
